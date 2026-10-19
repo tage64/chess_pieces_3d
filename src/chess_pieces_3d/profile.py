@@ -11,6 +11,7 @@ from .geometry import (
     GeometryError,
     Line,
     Point,
+    ProfilePath,
     Segment,
     Turn,
     Vector,
@@ -42,6 +43,14 @@ class Profile:
     @property
     def segments(self) -> tuple[Segment, ...]:
         return tuple(self._segments)
+
+    @property
+    def length(self) -> float:
+        return sum(segment.length for segment in self._segments)
+
+    def point_at(self, fraction: float) -> Point:
+        """Sample the complete profile by arc length, from 0 to 1."""
+        return ProfilePath(self._segments).point_at(fraction)
 
     @property
     def last_tangent(self) -> Vector:
@@ -200,7 +209,7 @@ class Profile:
         start_radius: float = 0,
         end_radius: float = 0,
         name: str | None = None,
-    ) -> tuple[Arc, ...]:
+    ) -> ProfilePath[Arc]:
         """Add a circle split at its X extremum, optionally filleted at vertical ends.
 
         The extremum lies strictly between endpoint Y values and beyond both X
@@ -218,7 +227,9 @@ class Profile:
             end = _endpoint(
                 self.end, _coordinate(self.end[0], x, dx), _coordinate(self.end[1], y, dy)
             )
-            segments = _arc_via_extreme(self.end, end, extreme_x, start_radius, end_radius, label)
+            segments = ProfilePath(
+                _arc_via_extreme(self.end, end, extreme_x, start_radius, end_radius, label)
+            )
             if (
                 start_radius > 0
                 and self._segments

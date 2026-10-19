@@ -29,13 +29,13 @@ profile.arc_via_extreme(
     name="stem",
 )
 profile.arc_line(x=3.4, dy=2.5, radius=2, turn="ccw", name="collar")
-profile.arc_via_extreme(x=2.5, dy=12.3, extreme_x=5.2, name="head")
+head = profile.arc_via_extreme(x=2.5, dy=12.3, extreme_x=5.2, name="head")
 profile.line(dy=1.2, name="head.neck")
 profile.arc(x=0, dy=1.5, end_tangent=(-1, 0), name="tip")
 profile.line(y=0, name="axis")
 
 
-def build_solid() -> cq.Workplane:
+def build_solid() -> cq.Solid:
     return revolve_profile(profile)
 
 

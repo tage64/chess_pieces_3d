@@ -1,8 +1,9 @@
 """Directed, minor-arc constructions in the XY plane."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from math import atan2, copysign, dist, hypot, isclose, isfinite, pi, sqrt, tau
-from typing import Literal
+from math import atan2, copysign, cos, dist, hypot, isclose, isfinite, pi, sin, sqrt, tau
+from typing import Literal, Self
 
 type Point = tuple[float, float]
 type Vector = tuple[float, float]
@@ -56,6 +57,11 @@ def _positive(value: float, label: str) -> None:
         raise GeometryError(f"{label} must be finite and positive")
 
 
+def _check_fraction(fraction: float) -> None:
+    if not isfinite(fraction) or not 0 <= fraction <= 1:
+        raise GeometryError("fraction must be finite and between 0 and 1")
+
+
 def _close(a: float, b: float) -> bool:
     return isclose(a, b, rel_tol=_TOL, abs_tol=_TOL)
 
@@ -91,6 +97,19 @@ class Line:
         _unit(_sub(self.end, self.start))
 
     @property
+    def length(self) -> float:
+        return dist(self.start, self.end)
+
+    def point_at(self, fraction: float) -> Point:
+        """Sample by arc length, from start (0) to end (1)."""
+        _check_fraction(fraction)
+        if fraction == 0:
+            return self.start
+        if fraction == 1:
+            return self.end
+        return _add(self.start, _scale(_sub(self.end, self.start), fraction))
+
+    @property
     def start_tangent(self) -> Vector:
         return _unit(_sub(self.end, self.start))
 
@@ -117,6 +136,21 @@ class Arc:
             raise GeometryError("arc endpoints must lie on the same circle")
         if dist(self.start, self.end) <= _TOL or not _TOL < self.sweep < pi - _TOL:
             raise GeometryError("an arc must have a sweep strictly between 0 and 180 degrees")
+
+    @property
+    def length(self) -> float:
+        return self.radius * self.sweep
+
+    def point_at(self, fraction: float) -> Point:
+        """Sample by arc length, following the arc's turn direction."""
+        _check_fraction(fraction)
+        if fraction == 0:
+            return self.start
+        if fraction == 1:
+            return self.end
+        angle = atan2(self.start[1] - self.center[1], self.start[0] - self.center[0])
+        angle += _sign(self.turn) * self.sweep * fraction
+        return self.center[0] + self.radius * cos(angle), self.center[1] + self.radius * sin(angle)
 
     @property
     def radius(self) -> float:
@@ -160,8 +194,55 @@ class ArcPair:
     def end_tangent(self) -> Vector:
         return self.second.end_tangent
 
+    @property
+    def length(self) -> float:
+        return self.first.length + self.second.length
+
+    def point_at(self, fraction: float) -> Point:
+        return ProfilePath((self.first, self.second)).point_at(fraction)
+
 
 type Segment = Line | Arc
+
+
+class ProfilePath[S: Segment](tuple[S, ...]):
+    """An immutable, connected profile part, retaining tuple indexing/unpacking."""
+
+    __slots__ = ()
+
+    def __new__(cls, segments: Iterable[S]) -> Self:
+        path = super().__new__(cls, segments)
+        if not path:
+            raise GeometryError("a profile path must contain at least one segment")
+        if any(dist(a.end, b.start) > _TOL for a, b in zip(path[:-1], path[1:], strict=True)):
+            raise GeometryError("profile path segments must be connected in order")
+        return path
+
+    @property
+    def start(self) -> Point:
+        return self[0].start
+
+    @property
+    def end(self) -> Point:
+        return self[-1].end
+
+    @property
+    def length(self) -> float:
+        return sum(segment.length for segment in self)
+
+    def point_at(self, fraction: float) -> Point:
+        """Sample the whole path by arc length, not by segment count."""
+        _check_fraction(fraction)
+        if fraction == 0:
+            return self.start
+        if fraction == 1:
+            return self.end
+        remaining = fraction * self.length
+        for segment in self:
+            if remaining <= segment.length:
+                return segment.point_at(min(1, max(0, remaining / segment.length)))
+            remaining -= segment.length
+        return self.end
 
 
 def _matches(arc: Arc, start: Vector | None, end: Vector | None) -> bool:

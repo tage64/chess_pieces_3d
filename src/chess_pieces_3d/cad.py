@@ -1,19 +1,13 @@
 """Revolve geometric profiles without loading CadQuery until a solid is requested."""
 
-from math import atan2, cos, dist, pi, sin, tau
+from math import atan2, dist, pi, tau
 from typing import TYPE_CHECKING
 
-from .geometry import _TOL, Arc, GeometryError, Point
+from .geometry import _TOL, Arc, GeometryError
 from .profile import Profile
 
 if TYPE_CHECKING:
     import cadquery as cq
-
-
-def _arc_midpoint(arc: Arc) -> Point:
-    angle = atan2(arc.start[1] - arc.center[1], arc.start[0] - arc.center[0])
-    angle += (1 if arc.turn == "ccw" else -1) * arc.sweep / 2
-    return arc.center[0] + arc.radius * cos(angle), arc.center[1] + arc.radius * sin(angle)
 
 
 def _validate_profile(profile: Profile) -> None:
@@ -34,8 +28,8 @@ def _validate_profile(profile: Profile) -> None:
                 raise GeometryError(f"{segment.name}: the arc crosses into negative X radii")
 
 
-def revolve_profile(profile: Profile) -> cq.Workplane:
-    """Revolve a closed profile 360° about Z, mapping profile (X, Y) to CAD (X, Z).
+def revolve_profile(profile: Profile) -> cq.Solid:
+    """Return a solid revolved 360° about Z, mapping profile (X, Y) to CAD (X, Z).
 
     Circular edges are preserved. The contour must stay at nonnegative X and
     produce exactly one valid solid; it is never implicitly closed.
@@ -47,11 +41,11 @@ def revolve_profile(profile: Profile) -> cq.Workplane:
     wire = cq.Workplane("XZ").moveTo(*profile.start)
     for segment in profile.segments:
         if isinstance(segment, Arc):
-            wire = wire.threePointArc(_arc_midpoint(segment), segment.end)
+            wire = wire.threePointArc(segment.point_at(0.5), segment.end)
         else:
             wire = wire.lineTo(*segment.end)
     result = wire.close().revolve(360, (0, 0), (0, 1))
     shape = result.findSolid()
-    if len(shape.Solids()) != 1 or not shape.isValid():
+    if len(solids := shape.Solids()) != 1 or not shape.isValid():
         raise GeometryError("revolving the profile did not produce a single valid solid")
-    return result
+    return solids[0]

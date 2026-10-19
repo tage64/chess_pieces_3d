@@ -36,7 +36,8 @@ class CadConversionTests(unittest.TestCase):
         self.workplane = MagicMock()
         for method in ("moveTo", "lineTo", "threePointArc", "close", "revolve"):
             getattr(self.workplane, method).return_value = self.workplane
-        self.workplane.findSolid.return_value.Solids.return_value = [object()]
+        self.solid = object()
+        self.workplane.findSolid.return_value.Solids.return_value = [self.solid]
         self.workplane.findSolid.return_value.isValid.return_value = True
         self.backend = SimpleNamespace(Workplane=Mock(return_value=self.workplane))
 
@@ -44,7 +45,7 @@ class CadConversionTests(unittest.TestCase):
         profile = cylinder_profile()
         with patch.dict(sys.modules, cadquery=self.backend):
             result = revolve_profile(profile)
-        self.assertIs(result, self.workplane)
+        self.assertIs(result, self.solid)
         self.backend.Workplane.assert_called_once_with("XZ")
         self.workplane.moveTo.assert_called_once_with(0, 0)
         self.assertEqual(
@@ -131,7 +132,7 @@ class CadConversionTests(unittest.TestCase):
         namespace = runpy.run_path(str(ROOT / "examples/löpare.py"))
         self.backend.Workplane.assert_not_called()
         with patch.dict(sys.modules, cadquery=self.backend):
-            self.assertIs(namespace["build_solid"](), self.workplane)
+            self.assertIs(namespace["build_solid"](), self.solid)
         self.workplane.revolve.assert_called_once()
         self.workplane.threePointArc.assert_called()
 
@@ -168,7 +169,7 @@ class CadIntegrationTests(unittest.TestCase):
             (hemisphere_profile(), 16 * math.pi / 3, 2),
         ):
             with self.subTest(volume=volume):
-                shape = revolve_profile(profile).findSolid()
+                shape = revolve_profile(profile)
                 self.assertTrue(shape.isValid())
                 self.assertEqual(len(shape.Solids()), 1)
                 self.assertAlmostEqual(shape.Volume(), volume)
@@ -183,11 +184,10 @@ class CadIntegrationTests(unittest.TestCase):
 
         namespace = runpy.run_path(str(ROOT / "examples/löpare.py"))
         solid = namespace["build_solid"]()
-        shape = solid.findSolid()
-        self.assertTrue(shape.isValid())
-        self.assertEqual(len(shape.Solids()), 1)
-        self.assertGreater(shape.Volume(), 0)
-        self.assertAlmostEqual(shape.BoundingBox().zmax, 37.75)
+        self.assertTrue(solid.isValid())
+        self.assertEqual(len(solid.Solids()), 1)
+        self.assertGreater(solid.Volume(), 0)
+        self.assertAlmostEqual(solid.BoundingBox().zmax, 37.75)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "bishop.stl"
             cq.exporters.export(solid, str(path))
