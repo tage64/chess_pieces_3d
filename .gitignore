@@ -1,0 +1,35 @@
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Tool caches and coverage
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.ty_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and local settings
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Generated CAD exports
+*.stl
+*.step
+*.stp
+
+# Editor and spreadsheet temporary files
+*.swp
+*.swo
+*~
+.~lock.*#
+.DS_Store

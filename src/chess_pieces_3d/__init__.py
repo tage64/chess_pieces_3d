@@ -1,0 +1,40 @@
+"""Terminal-friendly geometric profiles, independent of the CAD backend."""
+
+from .cad import revolve_profile
+from .geometry import (
+    TANGENT_X,
+    TANGENT_Y,
+    Arc,
+    ArcPair,
+    GeometryError,
+    Line,
+    Point,
+    Segment,
+    Turn,
+    Vector,
+)
+from .profile import Profile
+from .report import format_profile
+
+__all__ = [
+    "TANGENT_X",
+    "TANGENT_Y",
+    "Arc",
+    "ArcPair",
+    "GeometryError",
+    "Line",
+    "Point",
+    "Profile",
+    "Segment",
+    "Turn",
+    "Vector",
+    "format_profile",
+    "revolve_profile",
+]
+
+
+def main() -> None:
+    """Run the original CadQuery exporter, loading CAD only when requested."""
+    from .bishop import main as export_bishop
+
+    export_bishop()

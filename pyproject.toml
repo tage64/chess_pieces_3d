@@ -1,0 +1,33 @@
+[project]
+name = "chess-pieces-3d"
+version = "0.1.0"
+description = "Terminal-friendly parametric chess piece profiles"
+readme = "README.md"
+authors = [
+    { name = "Tage Johansson", email = "frans.tage@gmail.com" }
+]
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "cadquery>=2.8.0,<3",
+]
+
+[project.scripts]
+chess-pieces-3d = "chess_pieces_3d:main"
+profile-report = "chess_pieces_3d.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.1",
+    "ty>=0.0.89",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
