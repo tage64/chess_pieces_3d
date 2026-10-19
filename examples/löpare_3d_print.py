@@ -32,7 +32,7 @@ def build_solid(*, report: bool = False) -> cq.Shape:
     )
     balls = tuple(ball for patch in patches for ball in patch.balls)
     # Embed the knob's base into the rounded tip; 2 mm remains above the old tip.
-    overlap = 0.25
+    overlap = 2.0
     knob = cq.Solid.makeCylinder(
         radius=1, height=2 + overlap, pnt=(0, 0, löpare.tip.end[1] - overlap)
     )

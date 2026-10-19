@@ -221,7 +221,7 @@ density, plus the total of 443 balls. Edit `SAND_PATCHES` in the print example t
 change the samples.
 
 The knob is Ø2 mm and extends 2 mm above the original tip. Its construction
-cylinder starts 0.25 mm below the original apex, ensuring a properly fused
+cylinder starts 2 mm below the original apex, ensuring a properly fused
 connection to the rounded tip. That overlap is additional to the 2 mm extension;
 the original tip remains part of the model.
 

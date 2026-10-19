@@ -69,7 +69,7 @@ class PrintExampleTests(unittest.TestCase):
         self.assertTrue(result.isInside(self.cq.Vector(0, 0, 0.3)))
         tip_height = namespace["löpare"].tip.end[1]
         self.assertAlmostEqual(result.BoundingBox().zmax, tip_height + 2, delta=1e-6)
-        self.assertTrue(base.isInside(self.cq.Vector(1, 0, tip_height - 0.25)))
+        self.assertTrue(base.isInside(self.cq.Vector(1, 0, tip_height - 2)))
         for index in range(8):
             theta = index * math.pi / 4
             for r, inside in ((0.99, True), (1.01, False)):
