@@ -31,7 +31,7 @@ profile.arc_via_extreme(
 profile.arc_line(x=3.4, dy=2.5, radius=2, turn="ccw", name="collar")
 head = profile.arc_via_extreme(x=2.5, dy=12.3, extreme_x=5.2, name="head")
 profile.line(dy=1.2, name="head.neck")
-profile.arc(x=0, dy=1.5, end_tangent=(-1, 0), name="tip")
+tip = profile.arc(x=0, dy=1.5, end_tangent=(-1, 0), name="tip")
 profile.line(y=0, name="axis")
 
 

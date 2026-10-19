@@ -203,14 +203,27 @@ environment; no separate worker or custom native build is needed.
 uv run python examples/löpare_3d_print.py
 ```
 
-This exports `löpare_3d_print.stl` with the existing magnet cavity and staggered
-rings on a 90° sector, from 20% to 85% along the whole head by arc length. This
-leaves the first 20% and last 15% bare; the selected curved surface is about 0.66 cm².
-With the current drawing, 0.8 mm spacing and 0.2 mm ball radii, the command prints:
+This exports `löpare_3d_print.stl` with the existing magnet cavity, four adjacent
+90° sanding samples around the head, and a cylindrical top knob. Every sample
+runs from 20% to 85% along the whole head by arc length, leaving its first 20% and
+last 15% bare. Each selected curved sector is about 0.66 cm².
 
-```text
-Sand texture: 123 balls; 186.68 balls/cm² (surface patch: 0.66 cm²).
-```
+| Sector | Ball radius (mm) | Centre spacing (mm) | Balls | Balls/cm² |
+| --- | --- | --- | --- | --- |
+| 0–90° | 0.2 | 0.7 | 152 | 230.7 |
+| 90–180° | 0.2 | 0.9 | 93 | 141.15 |
+| 180–270° | 0.3 | 0.8 | 123 | 186.68 |
+| 270–360° | 0.3 | 1 | 75 | 113.83 |
+
+Angles run counterclockwise from +X. Ball sizes are **radii**, consistent with
+`ring_sand()`. The command prints each sector's parameters, count and surface
+density, plus the total of 443 balls. Edit `SAND_PATCHES` in the print example to
+change the samples.
+
+The knob is Ø2 mm and extends 2 mm above the original tip. Its construction
+cylinder starts 0.25 mm below the original apex, ensuring a properly fused
+connection to the rounded tip. That overlap is additional to the 2 mm extension;
+the original tip remains part of the model.
 
 Importing the print example does not build or export anything; call its
 `build_solid()` explicitly, or `build_solid(report=True)` to also print statistics.
