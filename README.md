@@ -62,12 +62,32 @@ base = profile.arc_pair(
   convention, even when your drawing uses negative Y coordinates.
 - Names are optional and otherwise assigned automatically. Explicit names must
   be unique, including the `.1`/`.2` names generated for an arc pair.
-- Basic operations return immutable `Line`, `Arc` or `ArcPair` objects. Compound
-  methods below return tuples of their segments. Refer to objects
+- Basic operations return immutable `Line`, `Arc` or `ArcPair` objects.
+  `arc_via_extreme()` returns an immutable `ProfilePath` of arcs; `arc_line()`
+  returns its arc and line as a tuple. Refer to objects
   directly rather than looking up strings: `base.first.radius`,
   `base.second.center`, `base.end`, `base.end_tangent`.
 - `profile.start`, `profile.end`, `profile.last_tangent` and `profile.segments`
   expose the current geometry. An empty profile has no tangent.
+
+### Fractional positions
+
+`Profile`, `Line`, `Arc`, `ArcPair` and `ProfilePath` expose `length` (in mm) and
+`point_at(fraction)`. Fractions range from 0 (start) to 1 (end) and measure **arc
+length**, not height, chord distance or segment count. For a multi-segment part,
+longer segments contribute proportionally.
+
+```python
+head = profile.arc_via_extreme(x=2.5, dy=12.3, extreme_x=5.2, name="head")
+start = head.point_at(0.2)
+end = head.point_at(0.85)
+```
+
+`ProfilePath` retains tuple indexing and unpacking, so `head[0]` still gives its
+first arc. It is a snapshot unaffected by later additions to the profile. Use
+`ProfilePath(segments)` to sample any other connected sequence, such as the pair
+returned by `arc_line()`. Invalid fractions, empty paths and disconnected paths
+are rejected. These geometry methods do not load CadQuery.
 
 ### Single arcs
 
@@ -155,8 +175,7 @@ executed as ordinary Python, so only run files you trust.
 
 ## Revolve and export
 
-`revolve_profile(profile)` returns a CadQuery `Workplane` containing a single
-solid. It maps profile X to radius and Y to Z height, revolves 360 degrees about
+`revolve_profile(profile)` returns a CadQuery `Solid`. It maps profile X to radius and Y to Z height, revolves 360 degrees about
 Z, and preserves circular edges using three-point arcs. The contour must already
 be closed and stay at nonnegative X, including between arc endpoints. Invalid or
 multiple solids are rejected.
@@ -177,6 +196,82 @@ load time. Type annotations use `TYPE_CHECKING` imports. Importing the converter
 legacy model or drawing therefore does not load CadQuery, and reporting stays
 lightweight. Both reporting and CAD generation run in the same Python 3.14
 environment; no separate worker or custom native build is needed.
+
+## Sand-like surface texture
+
+```sh
+uv run python examples/löpare_3d_print.py
+```
+
+This exports `löpare_3d_print.stl` with the existing magnet cavity and staggered
+rings on a 90° sector, from 20% to 85% along the whole head by arc length. This
+leaves the first 20% and last 15% bare; the selected curved surface is about 0.66 cm².
+With the current drawing, 0.8 mm spacing and 0.2 mm ball radii, the command prints:
+
+```text
+Sand texture: 123 balls; 186.68 balls/cm² (surface patch: 0.66 cm²).
+```
+
+Importing the print example does not build or export anything; call its
+`build_solid()` explicitly, or `build_solid(report=True)` to also print statistics.
+
+### Staggered rings along a profile
+
+```python
+from chess_pieces_3d import ring_sand
+
+patch = ring_sand(
+    profile,
+    start=head.point_at(0.2),
+    end=head.point_at(0.85),
+    angle=90,
+    start_angle=-45,
+    spacing=0.8,
+    radius=0.2,
+)
+textured = solid.fuse(*patch.balls) if patch.balls else solid
+print(patch.count, patch.area, patch.density_per_cm2)
+```
+
+`ring_sand()` returns a `SandPatch` with **unfused**, complete spheres. It does not
+revolve, alter or fuse the input profile. The drawing stores the head construction
+as `head = profile.arc_via_extreme(...)`, making its exact endpoints easy to reuse.
+
+- `start` and `end` are exact `(X, Y)` points on the profile, including interiors
+  of lines or arcs. They follow profile order; intervals do not wrap. Shared
+  segment junctions are accepted, while off-profile or ambiguous points are
+  rejected. On a closed contour, `start=profile.start, end=profile.end` selects
+  the whole contour. Prefer construction `.start`/`.end` references to rounded
+  report values.
+- Fractional positions belong to the geometry: `head.point_at(0.2)` and
+  `head.point_at(0.85)` leave the first 20% and final 15% of the whole head
+  unsanded. `ring_sand()` only receives the resulting start and end points.
+- Profile X becomes radius, and Y becomes Z height. Angles are degrees
+  counterclockwise about Z from +X. `angle` defaults to 360; `start_angle` defaults
+  to 0 and may be negative. These control coverage, not the solid's revolution.
+- Rings are spaced by meridian **arc length**, targeting `spacing * sqrt(3)/2`.
+  Ball counts target `spacing` around each circumference. Counts are rounded to
+  fit, and alternate rings shift by half an angular step. There is no planar
+  projection stretching, nor duplicate seam balls at 360°.
+- Ring centres are inset by half a row from the interval ends. Axis-only portions
+  contribute no area or rings. The selected profile must stay at nonnegative X.
+  Spacing and radius are in mm; spacing must exceed the sphere diameter.
+- `patch.balls` is a tuple of CAD shapes; `patch.count` is its length. `patch.area`
+  is the selected **original curved surface area in mm²**, computed analytically
+  as `radians(angle) * integral(radius * ds)` for the exact lines/arcs.
+  `patch.density_per_cm2` is count divided by that area in cm², before display
+  rounding. This is not the enlarged surface area of the bumps themselves.
+
+The layout is approximately hexagonal, not a perfect geodesic lattice: changing
+circumference and integer counts affect neighbours. Tight curvature, poles,
+sharp corners and oversized balls still require care. Bounds apply to centres;
+ball footprints can extend beyond them. The generator knows only the profile,
+not later cuts: select a surface that still exists on the solid being textured.
+CAD imports remain deferred until balls are generated.
+
+Tests check the fused CAD solid, preservation of the original material and magnet
+cavity, and STL mesh watertightness and winding. Mesh validation discards zero-area
+triangles that OCCT can emit at spherical poles.
 
 ## Development
 

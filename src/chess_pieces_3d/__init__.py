@@ -16,6 +16,7 @@ from .geometry import (
 )
 from .profile import Profile
 from .report import format_profile
+from .rings import SandPatch, ring_sand
 
 __all__ = [
     "TANGENT_X",
@@ -27,11 +28,13 @@ __all__ = [
     "Point",
     "Profile",
     "ProfilePath",
+    "SandPatch",
     "Segment",
     "Turn",
     "Vector",
     "format_profile",
     "revolve_profile",
+    "ring_sand",
 ]
 
 
